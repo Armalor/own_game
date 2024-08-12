@@ -54,7 +54,7 @@ print(f'{server_ip=}')
 PING_SIZE = 5
 ping_q = Queue(maxsize=PING_SIZE)
 
-TEAM_NUMBER = 1
+TEAM_NUMBER = 16
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
     sock.settimeout(2)
