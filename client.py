@@ -1,9 +1,14 @@
+from tkinter import *
+from tkinter import ttk
+
 import socket
 from queue import Queue
 from time import perf_counter, sleep
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Thread
 from statistics import mean
+
+TEAM_NUMBER = 1
 
 
 def get_local_ip():
@@ -49,36 +54,97 @@ def net_scan():
     return result
 
 
-server_ip = net_scan()
-print(f'{server_ip=}')
+def ping(server_ip: str, team_id, canvas):
+    PING_SIZE = 10
+    ping_q = Queue(maxsize=PING_SIZE)
 
-PING_SIZE = 5
-ping_q = Queue(maxsize=PING_SIZE)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(2)
+        sock.connect((server_ip, 9999))
 
-TEAM_NUMBER = 1
+        colors = {
+            'norm': {
+                'bg': 'green',
+                'fill': '#ffffff',
+            },
+            'warn': {
+                'bg': 'yellow',
+                'fill': 'blue',
+            },
+            'alert': {
+                'bg': 'red',
+                'fill': '#ffffff',
+            }
+        }
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-    sock.settimeout(2)
-    sock.connect((server_ip, 9999))
-    for _ in range(100000):
-        t0 = perf_counter()
-        sock.sendall(f'SYN_{TEAM_NUMBER}'.encode())
+        canvas["bg"] = colors['norm']['bg']
 
-        data = sock.recv(1024)
-        t1 = perf_counter() - t0
-        if ping_q.full():
-            _ = ping_q.get()
-        ping_q.put(t1)
+        # btn["text"] = f"Connected to {server_ip}"
+        text1 = canvas.create_text(20, 10, anchor=NW, text=f'ping: ', fill=colors['norm']['fill'], font="Arial 14")
 
-        avg = mean(ping_q.queue)
+        while True:
+            t0 = perf_counter()
+            sock.sendall(f'SYN_{team_id}'.encode())
 
-        print(data.decode(), f'ping: {avg:.5f}')
-        sleep(0.1)
+            data = sock.recv(1024)
+
+            t1 = perf_counter() - t0
+            if ping_q.full():
+                _ = ping_q.get()
+            ping_q.put(t1)
+
+            avg_ping = mean(ping_q.queue)
+
+            if avg_ping < 0.005:
+                bg = colors['norm']['bg']
+                fill = colors['norm']['fill']
+            elif avg_ping < 0.05:
+                bg = colors['warn']['bg']
+                fill = colors['warn']['fill']
+            else:
+                bg = colors['alert']['bg']
+                fill = colors['alert']['fill']
+
+            # print(data.decode(), f'ping: {avg_ping:.5f}')
+
+            canvas["bg"] = bg
+            canvas.itemconfig(text1, text=f"ping: {avg_ping:.4f}", fill=fill)
+            sleep(0.1)
+            # canvas1.delete(text1)
 
 
+def click(canvas):
+    if not hasattr(click, 'clicked'):
+        click.clicked = True
+
+        server_ip = net_scan()
+
+        th = Thread(target=ping, args=(server_ip, TEAM_NUMBER, canvas), daemon=True)
+        th.start()
 
 
+def finish(root_):
+    root_.destroy()  # ручное закрытие окна и всего приложения
+    print("Закрытие приложения")
 
 
-# result = net_scan()
-# print(f'Результат {result}')
+if __name__ == '__main__':
+    def finish():
+        root.destroy()  # ручное закрытие окна и всего приложения
+        print("Закрытие приложения")
+
+    root = Tk()
+    root.title(f"Team #{TEAM_NUMBER}")
+    root.geometry("1024x768")
+    root.iconbitmap(default="favicon.ico")
+    root.protocol("WM_DELETE_WINDOW", finish)
+    # root.attributes("-fullscreen", True)
+
+    canvas_ping = Canvas(bg="white", height=45)
+    canvas_ping.pack(anchor='n', expand=True, fill=X)
+
+    btn = ttk.Button(text="Find server...", command=lambda: click(canvas_ping))
+    btn.pack(anchor=CENTER, expand=True)
+
+    root.mainloop()
+
