@@ -1,53 +1,147 @@
 from tkinter import *
 from tkinter import ttk
 
-root = Tk()
-root.title("Client")
-root.geometry("300x300")
+import socket
+from queue import Queue
+from time import perf_counter, sleep
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Thread
+from statistics import mean
 
-canvas1 = Canvas(bg="white", width=250, height=50)
-canvas1.pack(anchor=CENTER, expand=1)
-
-# canvas2 = Canvas(bg="white", width=250, height=50)
-#
-# canvas2.pack(anchor=CENTER, expand=1)
-#
-# canvas3 = Canvas(bg="white", width=250, height=50)
-# canvas3.pack(anchor=CENTER, expand=1)
-
-# canvas1.create_line(10, 10, 200, 50)
+TEAM_NUMBER = 1
 
 
-# def entered(event):
-#     btn["text"] = "Entered"
-#
-#
-# def left(event):
-#     btn["text"] = "Left"
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.settimeout(0)
+    try:
+        # doesn't even have to be reachable
+        s.connect(('10.254.254.254', 1))
+        ip = s.getsockname()[0]
+    finally:
+        s.close()
+
+    return ip.split('.')
+
+
+def find_server(ip):
+    sock = socket.socket()
+    sock.settimeout(2)
+    try:
+        sock.connect((ip, 9999))
+    except (TimeoutError, ConnectionRefusedError):
+        return False
+    finally:
+        sock.close()
+    return ip
+
+
+def net_scan():
+    local_ip = get_local_ip()
+    futures = list()
+    result = False
+    with ThreadPoolExecutor(max_workers=255) as executor:
+
+        for d in range(1, 255):
+            local_ip[-1] = f'{d}'
+            futures.append(executor.submit(find_server, '.'.join(local_ip)))
+
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                break
+
+    return result
+
+
+def ping(server_ip: str, team_id):
+    PING_SIZE = 10
+    ping_q = Queue(maxsize=PING_SIZE)
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(2)
+        sock.connect((server_ip, 9999))
+
+        colors = {
+            'norm': {
+                'bg': 'green',
+                'fill': '#ffffff',
+            },
+            'warn': {
+                'bg': 'yellow',
+                'fill': '#000000',
+            },
+            'alert': {
+                'bg': 'red',
+                'fill': '#ffffff',
+            }
+        }
+
+        canvas1["bg"] = colors['norm']['bg']
+
+        btn["text"] = f"Connected to {server_ip}"
+        text1 = canvas1.create_text(20, 10, anchor=NW, text=f'ping: ', fill=colors['norm']['fill'], font="Arial 14")
+
+        while True:
+            t0 = perf_counter()
+            sock.sendall(f'SYN_{team_id}'.encode())
+
+            data = sock.recv(1024)
+
+            t1 = perf_counter() - t0
+            if ping_q.full():
+                _ = ping_q.get()
+            ping_q.put(t1)
+
+            avg_ping = mean(ping_q.queue)
+
+            if avg_ping < 0.005:
+                bg = colors['norm']['bg']
+                fill = colors['norm']['fill']
+            elif avg_ping < 0.05:
+                bg = colors['warn']['bg']
+                fill = colors['warn']['fill']
+            else:
+                bg = colors['alert']['bg']
+                fill = colors['alert']['fill']
+
+            # print(data.decode(), f'ping: {avg_ping:.5f}')
+
+            canvas1["bg"] = bg
+            canvas1.itemconfig(text1, text=f"ping: {avg_ping:.4f}", fill=fill)
+            sleep(0.1)
+            # canvas1.delete(text1)
 
 
 def click():
-    canvas1["bg"] = "green"
     if not hasattr(click, 'clicked'):
-        # click.text1 = canvas1.create_text(5, 10, anchor=NW, text="ping: 0.0011", fill="#ffffff", font="Arial 14")
         click.clicked = True
-    # else:
-       # canvas1.delete(click.text1)
+        canvas1["bg"] = "gray"
 
-    btn["text"] = "Connected!"
+        server_ip = net_scan()
 
-
-    # canvas2["bg"] = "yellow"
-    # canvas2.create_text(5, 10, anchor=NW, text="ping: 0.0011", fill="#ff0000", font="Arial 14")
-    #
-    # canvas3["bg"] = "red"
-    # canvas3.create_text(5, 10, anchor=NW, text="ping: 0.0011", fill="#0000aa", font="Arial 14")
+        th = Thread(target=ping, args=(server_ip, TEAM_NUMBER), daemon=True)
+        th.start()
 
 
-btn = ttk.Button(text="Find server...", command=click)
-btn.pack(anchor=CENTER, expand=1)
+def finish():
+    root.destroy()  # ручное закрытие окна и всего приложения
+    print("Закрытие приложения")
 
-# btn.bind("<Enter>", entered)
-# btn.bind("<Leave>", left)
 
-root.mainloop()
+if __name__ == '__main__':
+    root = Tk()
+    root.title(f"Team #{TEAM_NUMBER}")
+    root.geometry("1024x768")
+    root.iconbitmap(default="favicon.ico")
+    root.protocol("WM_DELETE_WINDOW", finish)
+
+
+    canvas1 = Canvas(bg="white", height=40)
+    canvas1.pack(anchor='n', expand=True, fill=X)
+
+    btn = ttk.Button(text="Find server...", command=click)
+    btn.pack(anchor=CENTER, expand=True)
+
+    root.mainloop()
+

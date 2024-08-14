@@ -2,6 +2,7 @@ import socket
 from queue import Queue
 from time import perf_counter, sleep
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Thread
 from statistics import mean
 
 
@@ -72,7 +73,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         avg = mean(ping_q.queue)
 
         print(data.decode(), f'ping: {avg:.5f}')
-        sleep(0.2)
+        sleep(0.1)
 
 
 
