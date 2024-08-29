@@ -15,8 +15,8 @@ class ConnectionHandler(BaseRequestHandler):
 
     def __init__(self, request, client_address, server):
 
-        self.ping_queues: Dict[int, Queue] = dict()
-        self.perf_counters: Dict[int, float] = dict()
+        self.ping_queues: Dict[str, Queue] = dict()
+        self.perf_counters: Dict[str, float] = dict()
 
         super().__init__(request, client_address, server)
 
@@ -55,16 +55,17 @@ class ConnectionHandler(BaseRequestHandler):
                 else:
                     response = f'ACK_???'
 
-                cnt = (int(perf_counter()) // 10) % 3
-
-                print(cnt)
-
-                if cnt == 0:
-                    ...
-                elif cnt == 1:
-                    sleep(0.005)
-                else:
-                    sleep(0.05)
+                # Искусственное циклическое изменение пинга:
+                # cnt = (int(perf_counter()) // 10) % 3
+                #
+                # print(cnt)
+                #
+                # if cnt == 0:
+                #     ...
+                # elif cnt == 1:
+                #     sleep(0.005)
+                # else:
+                #     sleep(0.05)
 
                 self.request.sendall(response.encode())
             except ConnectionError:

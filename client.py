@@ -143,8 +143,8 @@ if __name__ == '__main__':
     canvas_ping = Canvas(bg="white", height=45)
     canvas_ping.pack(anchor='n', expand=True, fill=X)
 
-    btn = ttk.Button(text="Find server...", command=lambda: click(canvas_ping))
-    btn.pack(anchor=CENTER, expand=True)
+    btn = ttk.Button(text="Find server...",  command=lambda: click(canvas_ping))
+    btn.pack(anchor=CENTER, expand=True, ipadx=10, ipady=10)
 
     root.mainloop()
 
