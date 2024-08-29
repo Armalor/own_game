@@ -15,3 +15,6 @@ class Step(ttk.Frame):
 
     def start(self):
         pass
+
+    def finish(self):
+        pass

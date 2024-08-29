@@ -5,7 +5,6 @@ from typing import List, Type
 # Локальный импорт:
 import sys
 from pathlib import Path
-__path__ = Path(__file__).absolute().parent
 __root__ = Path(__file__).absolute().parent.parent
 sys.path.append(__root__.__str__())
 from classes.step import Step
@@ -35,13 +34,15 @@ class Wizard(tk.Tk):
 
         self.show_step(self.current_step)
 
+        # TODO: метод, видимо, надо не «finish», а «destroy», плюс бежать по ВСЕМ шагам.
+        self.protocol("WM_DELETE_WINDOW", self.steps[-1].finish)
+
     def show_step(self, step_idx: int):
         step = self.steps[step_idx]
         step.tkraise()
         step.start()
 
     def next(self):
-        print(self.current_step, self.current_step < len(self.steps)-1)
         if self.current_step < len(self.steps)-1:
             self.current_step += 1
             self.show_step(self.current_step)
