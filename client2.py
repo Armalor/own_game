@@ -1,26 +1,13 @@
-from tkinter import *
-from tkinter import ttk
+# Локальный импорт:
+import sys
+from pathlib import Path
+__root__ = Path(__file__).absolute().parent
+sys.path.append(__root__.__str__())
+from classes import Wizard
+from client import ChooseTeam, PlayGame
+# ~Локальный импорт
 
-from client import click
 
-if __name__ == '__main__':
-    TEAM_NUMBER = 2
-
-    def finish():
-        root.destroy()  # ручное закрытие окна и всего приложения
-        print("Закрытие приложения")
-
-    root = Tk()
-    root.title(f"Team #{TEAM_NUMBER}")
-    root.geometry("1024x768")
-    root.iconbitmap(default="favicon.ico")
-    root.protocol("WM_DELETE_WINDOW", finish)
-    # root.attributes("-fullscreen", True)
-
-    canvas_ping = Canvas(bg="white", height=45)
-    canvas_ping.pack(anchor='n', expand=True, fill=X)
-
-    btn = ttk.Button(text="Find server...", command=lambda: click(canvas_ping))
-    btn.pack(anchor=CENTER, expand=True)
-
-    root.mainloop()
+if __name__ == "__main__":
+    app = Wizard(title="Client App", steps=[ChooseTeam, PlayGame])
+    app.mainloop()
