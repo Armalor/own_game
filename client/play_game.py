@@ -4,9 +4,9 @@ from tkinter import ttk
 import socket
 from queue import Queue
 from time import perf_counter, sleep
-from threading import Thread
+from threading import Thread, Lock
 from statistics import mean
-
+import re
 
 # Локальный импорт:
 import sys
@@ -45,7 +45,8 @@ class PlayGame(Step):
             }
         }
 
-        self.text_id = self.canvas.create_text(20, 60, anchor=NW, text=f'Connection...', font="Arial 28")
+        self.text1_id = self.canvas.create_text(20, 60, anchor=NW, text=f'Connection...', font="Arial 28")
+        self.text2_id = self.canvas.create_text(1024-20, 60, anchor=NE, text=f'', font="Arial 28")
 
         # Кнопка готовности к ответу:
         s = ttk.Style()
@@ -56,6 +57,8 @@ class PlayGame(Step):
         self.btn.grid(in_=self, row=1, column=0, rowspan=4, columnspan=4, sticky=NSEW)
 
         self.sock: socket.socket = None
+        self.data = None
+        self.lock = Lock()
 
     def start(self):
         th = Thread(target=self.ping, daemon=True)
@@ -100,9 +103,19 @@ class PlayGame(Step):
 
         while True:
             t0 = perf_counter()
-            self.sock.sendall(f'SYN_{self.controller.team_id}'.encode())
 
-            data = self.sock.recv(1024)
+            try:
+                with self.lock:
+                    self.sock.sendall(f'SYN_{self.controller.team_id}'.encode())
+                    self.data = self.sock.recv(1024).decode()
+            except Exception as err:
+                print(err)
+                self.canvas["bg"] = colors['alert']['bg']
+                self.canvas.itemconfig(self.text1_id, text=f"Connection is lost!", fill=colors['alert']['fill'])
+                self.btn['state'] = 'disabled'
+                break
+
+            # print(self.data)
 
             t1 = perf_counter() - t0
             if ping_q.full():
@@ -124,8 +137,30 @@ class PlayGame(Step):
             # print(data.decode(), f'ping: {avg_ping:.5f}')
 
             self.canvas["bg"] = bg
-            self.canvas.itemconfig(self.text_id, text=f"Team {self.controller.team_id}, ping: {avg_ping:.4f}", fill=fill)
-            sleep(0.3)
+            self.canvas.itemconfig(self.text1_id, text=f"Team {self.controller.team_id}, ping: {avg_ping:.4f}", fill=fill)
+
+            response_pattern = re.search(r'_response_(?P<response>.+)$', self.data)
+            text = None
+            if response_pattern:
+                response = response_pattern.group('response')
+                if 'RD' == response:
+                    text = 'Ready...'
+                elif 'ST' == response:
+                    text = 'START!'
+                elif 'FS' == response:
+                    text = 'False start!'
+                    fill = 'red'
+                elif response.isdigit():
+                    text = f"Place: {response}"
+
+                if text:
+                    self.canvas.itemconfig(self.text2_id, text=text, fill=fill)
+
+            sleep(0.25)
 
     def go(self):
-        print('GO!')
+        with self.lock:
+            self.sock.sendall(f'GO_{self.controller.team_id}'.encode())
+
+        fill = self.canvas.itemcget(self.text1_id, 'fill')
+        self.canvas.itemconfig(self.text2_id, text=f"Sending...", fill=fill)
