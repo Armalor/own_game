@@ -72,7 +72,6 @@ for c in range(16):
     result_canvas.append(canvas)
 
 
-
 def shutdown(server):
     print('Stop server...')
     server.shutdown()
