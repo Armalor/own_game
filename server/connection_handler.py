@@ -89,7 +89,11 @@ class ConnectionHandler(BaseRequestHandler):
             response = f'ASK_{team_id}_response_RD'
         elif self.prev_state == StateEnum.CLEAR and self.STATE == StateEnum.GO:
             # Если же наоборот, перешли в режим ожидания ответов, то отдаем GO!
-            response = f'ASK_{team_id}_response_GO'
+            # UPD: Внимание! Если команда уже отправила фальстарт, то им «GO!» НЕ ОТДАЕМ!
+            # UPD-2: В ЛЮБОМ случае, если команда есть в GO_TIMING, «GO!» не отдаем!
+            with self.LOCK:
+                if team_id not in self.GO_TIMING:
+                    response = f'ASK_{team_id}_response_GO'
 
         self.prev_state = self.STATE
         self.clear_taps = self.CLEAR_TAPS
