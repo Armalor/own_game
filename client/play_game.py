@@ -145,8 +145,8 @@ class PlayGame(Step):
                 response = response_pattern.group('response')
                 if 'RD' == response:
                     text = 'Ready...'
-                elif 'ST' == response:
-                    text = 'START!'
+                elif 'GO' == response:
+                    text = 'GO!'
                 elif 'FS' == response:
                     text = 'False start!'
                     fill = 'red'

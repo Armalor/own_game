@@ -1,1 +1,1 @@
-from .connection_handler import ConnectionHandler
+from .connection_handler import ConnectionHandler, GoTiming
