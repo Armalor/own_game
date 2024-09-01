@@ -4,10 +4,11 @@ from queue import Queue
 from typing import Dict, List
 from time import perf_counter, sleep
 from statistics import mean
-from threading import Lock
+from threading import Thread, Lock
 from enum import IntEnum, Enum
 from dataclasses import dataclass
-from collections import OrderedDict
+from playsound import playsound
+
 
 
 # Локальный импорт:
@@ -63,10 +64,16 @@ class ConnectionHandler(BaseRequestHandler):
             cls.GO_TIMING = dict()
             cls.CLEAR_TAPS += 1
 
+    @staticmethod
+    def gong():
+        playsound(str(__root__ / 'media' / 'chgk2_gong2.mp3'))
+
     @classmethod
     def go(cls):
         with cls.LOCK:
             cls.STATE = StateEnum.GO
+        th_gong = Thread(target=cls.gong)
+        th_gong.start()
 
     def go_response(self, team_id):
         with self.LOCK:
