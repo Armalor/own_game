@@ -10,10 +10,9 @@ from dataclasses import dataclass
 from playsound import playsound
 
 
-
 # Локальный импорт:
 import sys
-from pathlib import Path
+from pathlib import Path, PurePath
 __root__ = Path(__file__).absolute().parent.parent
 sys.path.append(__root__.__str__())
 # ~Локальный импорт
@@ -66,7 +65,16 @@ class ConnectionHandler(BaseRequestHandler):
 
     @staticmethod
     def gong():
-        playsound(str(__root__ / 'media' / 'chgk2_gong2.mp3'))
+        # Столкнулись с тем, что исполняемый exe-файл звуки не воспроизводит. Решение _MEIPASS попячено вот отсюда:
+        # https://stackoverflow.com/questions/57251491/is-pyinstaller-able-to-convert-py-file-to-exe-together-with-audio
+
+        relative_path = 'chgk2_gong2.mp3'
+        if hasattr(sys, '_MEIPASS'):
+            path = PurePath(sys._MEIPASS, relative_path).__str__()
+        else:
+            path = PurePath(__root__, 'media', relative_path).__str__()
+
+        playsound(path)
 
     @classmethod
     def go(cls):

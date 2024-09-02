@@ -1,1 +1,2 @@
+# Python 3.10.7
 playsound==1.2.2
