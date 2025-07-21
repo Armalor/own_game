@@ -68,7 +68,7 @@ class ConnectionHandler(BaseRequestHandler):
         # Столкнулись с тем, что исполняемый exe-файл звуки не воспроизводит. Решение _MEIPASS попячено вот отсюда:
         # https://stackoverflow.com/questions/57251491/is-pyinstaller-able-to-convert-py-file-to-exe-together-with-audio
 
-        relative_path = 'chgk2_gong2.mp3'
+        relative_path = 'beep.mp3'
         if hasattr(sys, '_MEIPASS'):
             path = PurePath(sys._MEIPASS, relative_path).__str__()
         else:
@@ -78,6 +78,8 @@ class ConnectionHandler(BaseRequestHandler):
 
     @classmethod
     def go(cls):
+        cls.gong()
+        sleep(0.35)
         with cls.LOCK:
             cls.STATE = StateEnum.GO
         th_gong = Thread(target=cls.gong)
@@ -171,8 +173,6 @@ class ConnectionHandler(BaseRequestHandler):
 
                     if response:
                         self.request.sendall(response.encode())
-
-
 
             except ConnectionError:
                 print(f"Client suddenly closed, cannot send")
